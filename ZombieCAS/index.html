@@ -464,6 +464,29 @@
         
         queue.Push(function () {
           math = MathJax.Hub.getAllJax("math");
+          setTimeout(function() {
+            drawGrid(canvas, params);
+            
+            // (1-sin(x)^2)^(1/2cos(x))
+            // taylor(AlexCAS) took 16026ms
+            // taylor(ZombieCAS) took 213ms
+            // 74x as fast
+            
+            // Trigonometric identities:
+            // =========================
+            // taylor(12):
+            // *  17ms for sin(2x)/2
+            // * 506ms for sin(x)*cos(x)
+            // => 30x as fast
+            //
+            // sin(x)*cos(x)*x
+            // * AlexCAS:   taylor(11) took 34389ms
+            // * ZombieCAS: taylor(11) took    16ms
+            // => 2150x as fast
+            
+            Module.create();
+            parse(formula);
+          }, 0);
         });
         
         function parse(input) {
@@ -509,31 +532,6 @@
           queue.Push([ "Text", math[i++], "\\displaystyle{" + fftSamples + "}" ]);
           queue.Push([ "Text", math[i++], "\\displaystyle{" + Module.latex() + "}" ])
         }
-        
-        setTimeout(function() {
-          drawGrid(canvas, params);
-          
-          // (1-sin(x)^2)^(1/2cos(x))
-          // taylor(AlexCAS) took 16026ms
-          // taylor(ZombieCAS) took 213ms
-          // 74x as fast
-          
-          // Trigonometric identities:
-          // =========================
-          // taylor(12):
-          // *  17ms for sin(2x)/2
-          // * 506ms for sin(x)*cos(x)
-          // => 30x as fast
-          //
-          // sin(x)*cos(x)*x
-          // * AlexCAS:   taylor(11) took 34389ms
-          // * ZombieCAS: taylor(11) took    16ms
-          // => 2150x as fast
-          
-          Module.create();
-          
-          parse(formula);
-        }, 400);
       });
       
       function drawGraph(canvas, config) {
