@@ -1,0 +1,683 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+  <head>
+    <title></title>
+    <meta charset="utf-8" /><!-- For Firefox !-->
+    <style type="text/css">
+    /*<![CDATA[*/
+      
+      * {
+        margin: 0;
+        padding: 0;
+      }
+      
+      body {
+        font-family: 'Helvetica Neue', 'Helvetica', 'Myriad Pro', 'Arial', sans-serif;
+        font-size: 12px;
+        font-weight: 300;
+        color: #333;
+        background-color: #fafafa;
+      }
+      
+      article {
+        padding: 16px 24px;
+        text-shadow: 0 1px white;
+      }
+      
+      #math {
+        line-height: 2em;
+        margin-bottom: 16px;
+      }
+      
+      canvas {
+        position: absolute;
+      }
+      
+      canvas#taylor {
+        z-index: 800;
+      }
+      
+      canvas, input#formula {
+        border-radius: 3px;
+      }
+      
+      canvas#taylor, input#formula {
+        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .1), inset 0 -1px rgba(0, 0, 0, .1), 0 1px rgba(0, 0, 0, .03);
+      }
+      
+      canvas#const {
+        background-color: white;
+      }
+      
+      input#formula {
+        /*border: 1px solid #ddd;
+        border-bottom-color: #c7c7c7;*/
+        border: none;
+        padding: 5px 8px;
+        font: inherit;
+        margin-bottom: 10px;
+        width: 600px;
+        outline: none;
+      }
+      
+      ::selection {
+        display: block;
+        background-color: red;
+        border-radius: 2px;
+        color: white;
+        text-shadow: 0 1px rgba(0, 0, 0, .2);
+      }
+      
+      footer {
+        /*
+        border-top: 1px solid #eaeaea;
+        background-color: white;*/
+        text-align: right;
+        text-shadow: 0 1px white;
+        margin-top: -20px;
+        padding: 8px 12px;
+        color: rgba(170, 170, 170, 0.7);
+        font-weight: 400;
+        font-size: 0.9em;
+      }
+      
+      div#canvases {
+        -webkit-user-select: none;
+        position: relative;
+        display: inline-block;
+      }
+      
+      div#zoom {
+        cursor: default;
+        position: absolute;
+        z-index: 900;
+        top: 10px;
+        right: 10px;
+        background-color: rgba(100, 100, 100, .7);
+        box-shadow: inset 0 1px 2px rgba(0, 0, 0, .2);
+        padding: 3px 5px 4px;
+        border-radius: 2px;
+      }
+      
+      div#zoom span {
+        font-weight: bold;
+        color: rgba(255, 255, 255, .6);
+        text-shadow: 0 -1px 1px rgba(0, 0, 0, .2);
+        padding: 3px 5px 4px;
+        -webkit-transition: 0.2s ease all;
+      }
+      
+      div#zoom span:hover {
+        color: rgba(255, 255, 255, 1.0);
+      }
+      
+      .guidat {
+        -webkit-user-select: none;
+      }
+      
+      span.example {
+        text-align: center;
+        display: inline-block;
+        border: 1px solid #888;
+        color: #777;
+        font-size: 0.7em;
+        line-height: 16px;
+        font-weight: bold;
+        border-radius: 16px;
+        width: 16px;
+        height: 16px;
+        position: relative;
+        top: -1px;
+        -webkit-transition: 0.1s ease all;
+        margin-right: 2px;
+        opacity: 0.5;
+        box-shadow: 0 1px white;
+      }
+      
+      span.example:hover {
+        cursor: pointer;
+        opacity: 0.8;
+      }
+      
+    /*]]>*/
+    </style>
+    <script type="text/x-mathjax-config">
+      MathJax.Hub.Config({
+        tex2jax: {
+          inlineMath: [["$","$"]]
+        }
+      });
+    </script>
+    <!--
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    -->
+    <script type="text/javascript" src="lib/MathJax.js?config=TeX-AMS_HTML.js"></script>
+    <script type="text/javascript" src="lib/DAT.GUI.min.js"></script>
+    <script type="text/javascript" src="Zombie.js"></script>
+    <script type="text/javascript">
+    //<![CDATA[
+      
+      function niceNum(num) {
+        return num.toFixed(8);
+      }
+      
+      function taylor(input, center, variable, degree) {
+        var sum = [];
+        var i = 0;
+        var denominator = 1;
+        
+        Module.parse(input);
+        
+        var d = new Date().getTime();
+        while(i <= degree && (new Date().getTime() - d) < 1000) {
+          Module.simplify();
+          
+          var y = Module.calculateWithX(center);
+          sum.push('(' + variable + '-' + niceNum(center) + ')^' + i + '*' + niceNum(y) + '/' + niceNum(denominator));
+          
+          denominator *= ++i;
+          
+          Module.derive(variable);
+        } alert("taylor(" + i + ") took " + (new Date().getTime() - d) + "ms"); return sum.join(' + ');
+      }
+      
+      function fft_wrapper(input, x0, x1, samples) {
+        Module.parse(input);
+        Module.simplify();
+        
+        var signal = [];
+        for(var i = 0; i < samples; ++i) {
+          var x = x0 + (x1 - x0) * i / samples;
+          var y = Module.calculateWithX(x);
+          signal[i] = [ y, 0 ];
+        }
+        
+        fft(signal, samples, +1);
+        
+        var min = 0.00001;
+        var sum = [];
+        for(var i = 0; i < samples/2; ++i) {
+          var scale = i == 0 ? 1 : 2;
+          if(Math.abs(signal[i][0]) > min) sum.push([ niceNum(+scale * signal[i][0]) + "*cos(" + i + "*x)" ]);
+          if(Math.abs(signal[i][1]) > min) sum.push([ niceNum(-scale * signal[i][1]) + "*sin(" + i + "*x)" ]);
+        }
+        
+        return sum.join(" + ");
+      }
+      
+      function fft(signal, nn, dir) {
+        var i1, i2 = nn / 2;
+        var j = 0;
+        
+        var m = Math.round(Math.log(nn) / Math.log(2));
+        
+        for(var i = 0; i < nn-1; ++i) {
+          if(i < j) {
+            var t = signal[i];
+            signal[i] = signal[j];
+            signal[j] = t;
+          }
+          
+          var k = i2;
+          while(k <= j) {
+            j -= k;
+            k /= 2;
+          }
+          
+          j += k;
+        }
+        
+        var c1 = -1.0;
+        var c2 = 0.0;
+        var l2 = 1;
+        
+        for(var l = 0; l < m; ++l) {
+          var l1 = l2;
+          l2 *= 2;
+          
+          var u1 = 1.0;
+          var u2 = 0.0;
+          
+          for(var j = 0; j < l1; ++j) {
+            for(var i = j; i < nn; i += Math.floor(l2)) {
+              i1 = Math.floor(i + l1);//console.log(i1);
+              t1 = u1 * signal[i1][0] - u2 * signal[i1][1];
+              t2 = u1 * signal[i1][1] + u2 * signal[i1][0];
+              signal[i1][0] = signal[i][0] - t1;
+              signal[i1][1] = signal[i][1] - t2;
+              signal[i][0] += t1;
+              signal[i][1] += t2;
+            }
+            
+            var u3;
+            u3 = u1 * c1 - u2 * c2;
+            u2 = u1 * c2 + u2 * c1;
+            u1 = u3;
+          }
+          
+          c2 = Math.sqrt((1.0 - c1) / 2.0);
+          if(dir == 1) c2 = -c2;
+          c1 = Math.sqrt((1.0 + c1) / 2.0);
+        }
+        
+        if(dir == 1)
+          for(var i = 0; i < nn; ++i) {
+            signal[i][0] /= nn;
+            signal[i][1] /= nn;
+          }
+      }
+      
+      var pixelScale = 2;
+      var canvas, gtx;
+      
+      var examples = [
+        "arcsin(a*sin(x))+arccos((b-a)*cos(x))-pi/2",
+        "a*x*sin(x)*cos(x)"
+      ];
+      
+      var formula = examples[0];
+      var yViewOffset = 1;
+      
+      var params = {
+        tangentOrder: 1,
+        trace: false,
+        depth: 3,
+        
+        a: 0.40,
+        b: 0.80,
+        step: 0.01,
+        
+        xOrigin: 400,
+        yOrigin: 300,
+        xScale: 0.0099,
+        yScale: 0.0099,
+        
+        title: 'ZombieCAS',
+        
+        clear: function() { redraw(true); }
+      };
+      
+      function drawTaylor(center) {
+        var canvas = document.querySelector('canvas#taylor');
+        var gtx = canvas.getContext('2d');
+        
+        gtx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        Module.order(0);
+        var d = new Date().getTime();
+        Module.taylor(center, params.tangentOrder);
+        document.title = params.title + ' — ' + (new Date().getTime() - d) + 'ms';
+        Module.simplify();
+        
+        gtx.strokeStyle = "#8a0";
+        drawGraph(canvas, params);
+      }
+      
+      function zoom(factor, e) {
+        if(e.shiftKey) factor = Math.pow(factor, 4);
+        params.xScale /= factor;
+        params.yScale /= factor;
+        redraw(true);
+      }
+      
+      function redraw(d) {
+        if(!params.trace || d !== undefined) {
+          gtx.clearRect(0, 0, canvas.width, canvas.height);
+          drawGrid(canvas, params);
+        }
+        
+        //var colors = [ "#000", "rgba(0, 170, 136, 0.66)", "rgba(170, 0, 136, 0.33)", "rgba(136, 170, 0, 0.1)" ];
+        
+        var colors = [ "#000", "#a08", "#a80", "#08a" ];
+        for(var i = params.depth; i >= 0; --i) {
+          Module.order(i);
+          gtx.strokeStyle = colors[i];
+          drawGraph(canvas, params);
+        }
+      }
+      
+      window.addEventListener('load', function() {
+        var e = document.querySelector('span#examples');
+        examples.forEach(function(example, i) {
+          var s = document.createElement('span');
+          s.title = "Beispiel " + (i + 1);
+          s.textContent = i + 1;
+          s.className = 'example';
+          s.addEventListener('click', function() {
+            document.querySelector('input#formula').value = example;
+            parse(example);
+          });
+          
+          e.appendChild(s);
+        });
+        
+        document.title = params.title;
+        document.querySelector('input#formula').value = formula;
+        
+        canvas = document.querySelector('canvas#const');
+        gtx = canvas.getContext('2d');
+        
+        document.querySelector('input').addEventListener('keyup', function(e) {
+          if(e.keyCode == 13) {
+            parse(this.value);
+            redraw();
+          }
+        });
+        
+        var gui = new DAT.GUI({
+        //width: 300,
+          height: 7 * 32 - 1
+        });
+        
+        gui.add(params, 'tangentOrder', 1, 16, 1).name('Tangentenord.').onFinishChange(function() {
+          // refresh based on the new value of params.interation
+        });
+        
+        gui.add(params, 'depth', 0, 3, 1).name('Tiefe').onChange(function() { redraw(); });
+        
+        var steppers = [];
+        var names = [ 'a', 'b' ];
+        for(var i = 0; i < names.length; ++i) {
+          (function(name) {
+            Module.setParam(name, params[name]); // Initialize.
+            
+            var stepper = gui.add(params, name, 0, 1).onChange(function(e) {
+              var a = Module.getParam(name);
+              var b = params.a;
+              
+              var min = Math.min(a, b);
+              var max = Math.max(a, b);
+              
+              if(params.trace)
+                for(; min <= max; min += params.step) {
+                  Module.setParam(name, min);
+                  redraw();
+                }
+              
+              Module.setParam(name, params[name]);
+              if(!params.trace) redraw();
+            }).step(params.step).name('Parameter ' + name);
+            steppers.push(stepper);
+          })(names[i]);
+        }
+        
+        gui.add(params, 'trace').name('Spur').onChange(function() { redraw(); });
+        gui.add(params, 'step', [ 0.25, 0.1, 0.05, 0.01, 0.001 ]).name('Schritt').onChange(function(e) {
+          for(var i = 0; i < steppers.length; ++i) steppers[i].step(e);
+        });
+        
+        gui.add(params, 'clear').name("L&ouml;schen");
+        
+        /*
+        gui.add(params, 'xOrigin', 0, 800, 1).onChange(function() { redraw(); });
+        gui.add(params, 'yOrigin', 0, 600, 1).onChange(function() { redraw(); });
+        gui.add(params, 'xScale', 0.001, 0.1, 0.001).onChange(function() { redraw(); });
+        gui.add(params, 'yScale', 0.001, 0.1, 0.001).onChange(function() { redraw(); });
+        */
+        
+        //
+        // End GUI.
+        //
+        
+        var canvases = document.querySelectorAll('canvas');
+        
+        Array.prototype.slice.apply(canvases).forEach(function(canvas) {
+          canvas.style.width = canvas.width + 'px';
+          canvas.style.height = canvas.height + 'px';
+          canvas.width *= pixelScale;
+          canvas.height *= pixelScale;
+        });
+        
+        var testX = 0.0;
+        var dragging = false, lastPoint = [0,0];
+        canvases[0].addEventListener('mousemove', function(e) {
+          if(dragging) {
+            var dif = [ e.pageX - lastPoint[0], e.pageY - lastPoint[1] ];
+            lastPoint = [ e.pageX, e.pageY ];
+            params.xOrigin += dif[0];
+            params.yOrigin += dif[1];
+            redraw(true);
+          }
+          
+          var x = ((e.offsetX || e.layerX) - params.xOrigin) * params.xScale;
+          drawTaylor(x);
+        });
+        
+        canvases[0].addEventListener('mouseout', function(e) {
+          var canvas = document.querySelector('canvas#taylor');
+          var gtx = canvas.getContext('2d');
+          gtx.clearRect(0, 0, canvas.width, canvas.height);
+        });
+        
+        canvases[0].addEventListener('mousedown', function(e) {
+          dragging = true;
+          lastPoint = [ e.pageX, e.pageY ];
+        });
+        
+        canvases[0].addEventListener('mouseup', function(e) {
+          dragging = false;
+        });
+        
+        var queue = MathJax.Hub.queue;  // shorthand for the queue
+        var math = null;                // the element jax for the math output.
+        
+        queue.Push(function () {
+          math = MathJax.Hub.getAllJax("math");
+        });
+        
+        function parse(input) {
+          var i = 0;
+          
+          Module.parse(input);
+          Module.simplify();
+          Module.simplify();
+          queue.Push([ "Text", math[i++], "\\displaystyle{" + Module.latex() + "}" ]);
+          Module.order(1);
+          queue.Push([ "Text", math[i++], "\\displaystyle{" + Module.latex() + "}" ]);
+          
+          redraw();
+          return;
+          
+          var canvas = document.querySelector('canvas#grid');
+          var gtx = canvas.getContext('2d');
+          
+          // TODO:2014-11-04:alex:Movable center.
+          var taylorCenter = 0.0;
+          
+          Module.parse(input);
+          var d = new Date().getTime();
+          Module.taylor(taylorCenter, 4);
+          document.title = params.title + ' — ' + (new Date().getTime() - d) + 'ms';
+          
+          queue.Push([ "Text", math[i++], "\\displaystyle{" + taylorCenter + "}" ]);
+          queue.Push([ "Text", math[i++], "\\displaystyle{" + Module.latex() + "}" ]);
+          
+          gtx.strokeStyle = "#a80";
+          params.yOrigin -= yViewOffset; drawGraph(canvas, config); params.yOrigin += yViewOffset;
+          return;
+          //
+          
+          var fftSamples = 32, fftA = 0, fftB = 2 * Math.PI;
+          var signal = fft_wrapper(input, fftA, fftB, fftSamples);
+          Module.parse(signal);
+          
+          gtx.strokeStyle = "#8a0";
+          params.yOrigin += yViewOffset; drawGraph(canvas, config); params.yOrigin -= yViewOffset;
+          
+          queue.Push([ "Text", math[i++], "\\displaystyle{\\left[" + fftA.toFixed(4) + ";" + fftB.toFixed(4) + "\\right[}" ]);
+          queue.Push([ "Text", math[i++], "\\displaystyle{" + fftSamples + "}" ]);
+          queue.Push([ "Text", math[i++], "\\displaystyle{" + Module.latex() + "}" ])
+        }
+        
+        setTimeout(function() {
+          drawGrid(canvas, params);
+          
+          // (1-sin(x)^2)^(1/2cos(x))
+          // taylor(AlexCAS) took 16026ms
+          // taylor(ZombieCAS) took 213ms
+          // 74x as fast
+          
+          // Trigonometric identities:
+          // =========================
+          // taylor(12):
+          // *  17ms for sin(2x)/2
+          // * 506ms for sin(x)*cos(x)
+          // => 30x as fast
+          //
+          // sin(x)*cos(x)*x
+          // * AlexCAS:   taylor(11) took 34389ms
+          // * ZombieCAS: taylor(11) took    16ms
+          // => 2150x as fast
+          
+          Module.create();
+          
+          parse(formula);
+        }, 400);
+      });
+      
+      function drawGraph(canvas, config) {
+        var W = canvas.width, H = canvas.height;
+        var gtx = canvas.getContext('2d');
+        
+        gtx.save();
+        gtx.scale(pixelScale, pixelScale);
+        
+        gtx.fillStyle = gtx.strokeStyle;
+        
+        var CX = config.xOrigin, CY = config.yOrigin;
+        var XS = config.xScale,  YS = config.yScale;
+        
+        var STEP = 2.0;
+        
+        var need = 1;
+        
+        var lx = 0, ly = 0;
+        var px = 0, py = 0;
+        
+        gtx.beginPath();
+        var wasNaN = false;
+        
+        for(var x = -STEP; x <= W; x += STEP) {
+          var fx = (x - CX) * XS;
+          var fy = Module.calculateWithX(fx);
+          
+          if(isNaN(fy) && !wasNaN) {
+            gtx.stroke();
+            gtx.closePath();
+            gtx.beginPath();
+          } wasNaN = isNaN(fy);
+          
+          var y = CY - fy / YS;
+          
+          var s = Math.abs(y - ly); if(isNaN(s)) s = -(STEP * STEP);
+          need += s / STEP + STEP;
+          
+          if(need >= 1) {
+            if(need > 2) need = need > 40 ? 4 : 2; // TODO:2014-11-05:alex:Fix this. It does some weird rendering bugs.
+            
+            var mstep = 1 / need;
+            for(var mx = lx; mx < x; mx += mstep) {
+              var my = CY - Module.calculateWithX((mx - CX) * XS) / YS;
+              
+              if(Math.abs(my - py) > 20.0) gtx.moveTo(mx, my - 0.5);
+              gtx.lineTo(mx, my);
+              
+              px = mx; py = my;
+            } need = 0;
+          }
+          
+          lx = x; ly = y;
+        }
+        
+        gtx.stroke();
+        gtx.closePath();
+        
+        gtx.restore();
+      }
+      
+      function drawGrid(canvas, config) {
+        var W = canvas.width - 1, H = canvas.height - 1;
+        var CX = config.xOrigin, CY = config.yOrigin;
+        var XS = config.xScale,  YS = config.yScale;
+        var LX = 1 / XS, LY = 1 / YS;
+        
+        var gtx = canvas.getContext('2d');
+        
+        gtx.save();
+        gtx.scale(pixelScale, pixelScale);
+        
+        gtx.beginPath();
+        
+        var x = CX % LX, y = CY % LY;
+        for(; x < W; x += LX) {
+          gtx.moveTo(x, 0);
+          gtx.lineTo(x, H);
+        } for(; y < H; y += LY) {
+          gtx.moveTo(0, y);
+          gtx.lineTo(W, y);
+        }
+        
+        gtx.strokeStyle = '#ddd';
+        gtx.stroke();
+        
+        gtx.closePath();
+        
+        gtx.beginPath();
+        
+        var x = CX % (LX * 5), y = CY % (LY * 5);
+        for(; x < W; x += LX * 5) {
+          gtx.moveTo(x, 0);
+          gtx.lineTo(x, H);
+        } for(; y < H; y += LY * 5) {
+          gtx.moveTo(0, y);
+          gtx.lineTo(W, y);
+        }
+        
+        gtx.strokeStyle = '#bbb';
+        gtx.stroke();
+        
+        gtx.closePath();
+        
+        gtx.beginPath();
+        gtx.moveTo(0, CY);
+        gtx.lineTo(W, CY);
+        gtx.moveTo(CX, 0);
+        gtx.lineTo(CX, H);
+        
+        gtx.strokeStyle = '#555';
+        gtx.stroke();
+        
+        gtx.closePath();
+        
+        gtx.restore();
+      }
+      
+    //]]>
+    </script>
+  </head>
+  <body>
+    <article>
+      <input id="formula" type="text" value="Wird geladen..." placeholder="Formel hier eingeben" />&nbsp;
+      <span id="examples"></span>
+      <div id="math">
+        = ${}$<span style="width:30px;display:inline-block;"></span>d/dx: ${}$<br />
+        <!--Taylorreihen-Approximation am Entwicklungspunkt x=${}$: ${}$<br />
+        Fourierreihe (FFT) im Interval ${}$ mit ${}$ Stützen: ${}$-->
+      </div>
+      
+      <div id="canvases">
+        <div id="zoom">
+          <span onclick="javascript:zoom(1.25, event);" title="Vergrößern">+</span>
+          <span onclick="javascript:zoom(0.80, event);" title="Verkleinern">&#8211;</span>
+        </div>
+        <canvas id="taylor" width="800" height="600"></canvas>
+        <canvas id="const" width="800" height="600"></canvas>
+        <canvas id="grid" width="800" height="600" style="position:relative;"></canvas>
+      </div>
+    </article>
+    <footer>
+      &copy; Zombies
+    </footer>
+  </body>
+</html>
