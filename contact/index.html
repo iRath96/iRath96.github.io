@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+  <head>
+    <title></title>
+    <style type="text/css">
+    /*<![CDATA[*/
+      
+      * {
+        margin: 0;
+        padding: 0;
+      }
+      
+      body {
+        font-family: 'Helvetica Neue', 'Helvetica', 'Myriad Pro', 'Arial', sans-serif;
+        font-size: 12px;
+        font-weight: 300;
+        color: #333;
+        padding: 20px;
+      }
+      
+      h2 {
+        margin-top: 10px;
+      }
+      
+    /*]]>*/
+    </style>
+    <script type="text/javascript">
+    //<![CDATA[
+      
+      var freq = [[94.0, -0.0], [5.298859165815809, 2.522465728054477], [5.742831801843939, -7.132997139272142], [-4.031075709173799, 5.040513045683752], [0.009338181591747693, 4.530676514380876], [-1.898514512964195, -4.549880158076094], [3.2708289788220744, -4.109472337537952], [-0.2301920387787959, 1.5015658408688917], [-2.6620758671567386, 2.644721267411728], [-2.662075867156795, -2.644721267411699], [-0.23019203877874073, -1.5015658408688486], [3.270828978822098, 4.1094723375379045], [-1.8985145129642864, 4.549880158075958], [0.009338181591722198, -4.530676514381021], [-4.031075709173564, -5.040513045683804], [5.74283180184392, 7.132997139272216], [5.298859165815996, -2.5224657280544927]];
+      
+      var originalFreq = [];
+      for(var i = 0, j = freq.length; i < j; ++i)
+        originalFreq[i] = [ freq[i][0], freq[i][1] ];
+      
+      function showGM() {
+        var str = "";
+        var nn = freq.length;
+        for(var n = 0; n < nn; ++n) {
+          var x = 0;
+          for(var k = 0; k < nn; ++k) {
+            var arg = -2*Math.PI*k*n/nn;
+            x += freq[k][0] * Math.cos(arg);
+            x += freq[k][1] * Math.sin(arg);
+          }
+          
+          str += String.fromCharCode(Math.round(x));
+        }
+        
+        document.querySelector('code#gm').textContent = str;
+      }
+      
+      window.addEventListener('load', function() {
+        // I felt like doing a fourier-transform.
+        
+        if(Math.random() > 0.8) {
+          var lowpassFreq = 12;
+          var interval = setInterval(function() {
+            if(lowpassFreq > 20) clearInterval(interval);
+            lowpassFreq += 0.1;
+            
+            for(var k = 0; k < freq.length; ++k) {
+              var logistic = 1 / (1 + Math.exp(4.0 * (k - lowpassFreq)));
+              for(var s = 0; s < 2; ++s)
+                freq[k][s] = logistic * originalFreq[k][s];
+            }
+            
+            showGM();
+          }, 50);
+        } else {
+          var affectFreq = Math.floor(Math.random() * freq.length * 0.5);
+          var affect = [ affectFreq, affectFreq == 0 ? 0 : Math.floor(Math.random()*2) ];
+          var originalF = freq[affect[0]][affect[1]];
+          var scale = 100.0 / Math.abs(originalF);
+          var interval = setInterval(function() {
+            scale = 1.0 + (scale - 1.0) * 0.9;
+            if(scale < 1.001) clearInterval(interval);
+            freq[affect[0]][affect[1]] = originalF * scale;
+            showGM();
+          }, 50);
+        }
+      });
+      
+    //]]>
+    </script>
+  </head>
+  <body>
+    <h1>Contact</h1>
+    <p>
+      If you have found any bugs in my software, have recommendations for features or any other ideas
+      you'd like to share with me then I'd love to hear from you.
+    </p>
+    
+    <h2>Github</h2>
+    <p>
+      My Github page is <a href="http://www.github.com/irath96/">here</a>.
+      That's <i>the best place</i> to post bug reports or feature requests for any of my projects.
+    </p>
+    
+    <h2>IRC</h2>
+    <p>
+      The most instant way to reach me will probably be IRC.
+      You can usually reach me as <i>irath96</i> on irc.freenode.net in #funkytown.
+    </p>
+    
+    <h2>Email</h2>
+    <p>
+      If all other methods fail for you then you can also try sending me an email. However, be aware that
+      my spam filter is really aggressive and that I don't often check my spam folder.
+      <code id="gm"></code>
+    </p>
+  </body>
+</html>
