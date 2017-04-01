@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+  <head>
+    <title></title>
+    <meta charset="utf-8" /><!-- For Firefox !-->
+    <style type="text/css">
+    /*<![CDATA[*/
+      
+      * {
+        margin: 0;
+        padding: 0;
+      }
+      
+      body {
+        font-family: 'Helvetica Neue', 'Helvetica', 'Myriad Pro', 'Arial', sans-serif;
+        font-size: 12px;
+        font-weight: 300;
+        color: #333;
+        background-color: #fafafa;
+      }
+      
+      span.invisible {}
+      
+      span.normal {
+        background-color: #cbcbcb;
+      }
+      
+      span.highlight {
+        background-color: #48c5d8;
+      }
+      
+      pre span.normal {
+        box-shadow: inset 0 0 1px rgba(0, 0, 0, .18), inset 1px 1px rgba(255, 255, 255, .08);
+      }
+      
+      pre {
+        display: inline-block;
+        margin: 10px 0;
+      }
+      
+      pre#state, pre#alternative {
+        border: 4px solid #bbb;
+        border-top: none;
+        /*width: 160px;
+        height: 320px;*/
+      }
+      
+      pre#alternative {
+        opacity: 0.5;
+      }
+      
+      pre#next {
+        width: 64px;
+        height: 64px;
+        border: none;
+      }
+      
+      pre span {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+      }
+      
+      div.controls {
+        text-align: center;
+      }
+    
+    /*]]> */
+    </style>
+    <script type="text/javascript" src="Tetris.js"></script>
+    <script type="text/javascript">
+    //<![CDATA[
+      
+      var qSum = 0, qCount = 0;
+      function displayScore() {
+        var min = Module.getMinCost();
+        var max = Module.getMaxCost();
+        var user = Module.getUserCost();
+        
+        var q = 1 - ((user - min) / (max - min));
+        q *= q;
+        
+        qSum += q * (max - min);
+        qCount += max - min;
+        
+        document.querySelector('span#score').textContent = "Q: " + q + "; " + min + " < " + user + " < " + max;
+        
+        var a = [];
+        if(q >= 0.99) a = [ "Excellent!", "Perfect!", "Brillant!" ];
+        else if(q >= 0.90) a = [ "Cool!", "Nice!", "Good one!" ];
+        else if(q >= 0.75) a = [ "Alright.", "Okay.", "Yeah." ];
+        else if(q >= 0.60) a = [ "Not too bad.", "Yeah, whatever." ];
+        else if(q >= 0.40) a = [ "Argh.", "Uhhh..." ];
+        else if(q >= 0.25) a = [ "What?!", "wtf", "You know how this game works, do you?", "Ouch!" ];
+        else if(q >= 0.05) a = [ "Terrible!!!", "Awful!!!", "HELP." ];
+        else a = [ "Oh god.", "You're a hopeless case.", "(facepalm)" ];
+        
+        document.querySelector('span#score').textContent = a[Math.floor(Math.random() * a.length)] + ' (' + Math.round(q * 1000) / 10 + '% x ' + Math.round((max - min) * 100) / 100 + ')';
+        document.querySelector('span#qavg').textContent = 'Average: ' + Math.round(qSum * 1000 / qCount) / 10 + '%';
+      }
+      
+      function renderState(element, s) {
+        var bgColors = [
+          '',
+          '#a43e3e',
+          '#b99a30',
+          '#63a934',
+          '#447b9e',
+          '#7d449e',
+          '#aa4ba0',
+          '#999999'
+        ];
+        
+        var html = '';
+        for(var i = 0; i < s.length; ++i) {
+          switch(s.charAt(i)) {
+            case '0': html += '<span class="invisible"> </span>'; break;
+            case '1': case '2': case '3': case '4': case '5': case '6': case '7':
+              html += '<span class="normal" style="background-color:' + bgColors[Number(s.charAt(i))] + ';"> </span>'; break;
+            default : html += s.charAt(i);
+          }
+        }
+        
+        element.innerHTML = html;
+      }
+      
+      function nextPiece(firstRun) {
+        if(Module.isGameOver())
+          return;
+        
+        if(firstRun === undefined) {
+          displayScore();
+          renderState(preAlternative, Module.getAlternativeState());
+        }
+        
+        renderState(preNext, Module.getNextPiece());
+      }
+      
+      function displayState() {
+        if(Module.isGameOver()) {
+          document.querySelector('span#score').textContent = "Game-over!";
+          return;
+        }
+        
+        renderState(pre, Module.getState());
+      }
+      
+      var interval = null;
+      function resetSpeed(timespan) {
+        if(interval !== null)
+          clearInterval(interval);
+        
+        interval = setInterval(function () {
+          if(Module.tick()) nextPiece();
+          displayState();
+        }, timespan);
+      }
+      
+      var pre, preNext, preAlternative;
+      window.addEventListener('load', function () {
+        pre = document.querySelector('pre#state');
+        preNext = document.querySelector('pre#next');
+        preAlternative = document.querySelector('pre#alternative');
+        
+        setTimeout(function () {
+          Module.setSeed(Math.random() * 1000000);
+          Module.reset();
+          nextPiece(true);
+          
+          resetSpeed(500);
+        }, 500);
+        
+        document.addEventListener('keydown', function (e) {
+          switch(e.keyCode) {
+            case 37: Module.move(-1); displayState(); break;
+            case 39: Module.move(+1); displayState(); break;
+            case 38: Module.rotate(-1); displayState(); break;
+            case 40: Module.rotate(+1); displayState(); break;
+            case 32: while(!Module.tick()); nextPiece(); displayState(); break;
+          }
+        });
+      });
+      
+    //]]>
+    </script>
+  </head>
+  <body>
+    <div style="text-align:center;">
+      <pre>Next:<br /><pre id="next"></pre></pre>
+      <pre id="state"></pre>
+      <pre id="alternative"></pre>
+    </div>
+    
+    <div style="text-align:center;">
+      <span style="font-weight:bold;" id="score"></span><br />
+      <span id="qavg"></span>
+    </div>
+  </body>
+</html>

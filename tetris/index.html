@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+  <head>
+    <title></title>
+    <meta charset="utf-8" /><!-- For Firefox !-->
+    <style type="text/css">
+    /*<![CDATA[*/
+      
+      * {
+        margin: 0;
+        padding: 0;
+      }
+      
+      body {
+        font-family: 'Helvetica Neue', 'Helvetica', 'Myriad Pro', 'Arial', sans-serif;
+        font-size: 12px;
+        font-weight: 300;
+        color: #333;
+        background-color: #fafafa;
+      }
+      
+      span.invisible {}
+      
+      span.normal {
+        background-color: #cbcbcb;
+      }
+      
+      span.highlight {
+        background-color: #48c5d8;
+      }
+      
+      pre {
+        display: block;
+        width: 160px;
+        height: 320px;
+        margin: 100px auto 50px;
+        border: 4px solid #bbb;
+        border-top: none;
+      }
+      
+      pre span {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+      }
+      
+      div.controls {
+        text-align: center;
+      }
+    
+    /*]]> */
+    </style>
+    <script type="text/javascript" src="Tetris.js"></script>
+    <script type="text/javascript">
+    //<![CDATA[
+      
+      function displayState() {
+        var html = '';
+        var s = Module.getState();
+        for(var i = 0; i < s.length; ++i) {
+          switch(s.charAt(i)) {
+            case '0': html += '<span class="invisible"> </span>'; break;
+            case '1': html += '<span class="normal"> </span>'; break;
+            case '2': html += '<span class="highlight"> </span>'; break;
+            default : html += s.charAt(i);
+          }
+        }
+        
+        pre.innerHTML = html;
+      }
+      
+      var interval = null;
+      function resetSpeed(timespan) {
+        if(interval !== null)
+          clearInterval(interval);
+        
+        interval = setInterval(function () {
+          Module.doStep(true);
+          displayState();
+        }, timespan);
+      }
+      
+      var pre;
+      window.addEventListener('load', function () {
+        pre = document.querySelector('pre');
+        setTimeout(function () {
+          Module.setSeed(Math.random() * 1000000);
+          resetSpeed(100);
+        }, 500);
+      });
+      
+    //]]>
+    </script>
+  </head>
+  <body>
+    <pre></pre>
+    <div class="controls">
+      <input type="button" value="Fastest" onclick="resetSpeed(1);" />
+      <input type="button" value="Faster" onclick="resetSpeed(5);" />
+      <input type="button" value="Fast" onclick="resetSpeed(10);" />
+      <input type="button" value="Normal" onclick="resetSpeed(100);" />
+      <input type="button" value="Slow" onclick="resetSpeed(500);" />
+      <input type="button" value="Slowest" onclick="resetSpeed(2500);" />
+    </div>
+  </body>
+</html>
