@@ -68,8 +68,8 @@ var App = (function() {
     if(navigator.userAgent.indexOf("Chrome/") > -1) runsInSafari = false;
     if(navigator.userAgent.indexOf("OPR/") > -1) runsInSafari = false;
     
-    if(App.runsInSafari)
-      alert("Safari does not properly support file downloads.\nYou can view and edit files, but saving them might not work properly." + please_switch);
+    //if(App.runsInSafari)
+    //  alert("Safari does not properly support file downloads.\nYou can view and edit files, but saving them might not work properly." + please_switch);
   };
   
   this.refreshTree = function() {
@@ -106,6 +106,7 @@ var App = (function() {
       
       return true;
     } catch(e) {
+      console.log(e);
       return false;
     }
   }
@@ -284,10 +285,8 @@ var App = (function() {
       actions["rename"] = {
         "label": (tag.hasName() ? "Rename..." : "Name..."),
         "action": function(obj) {
-          node.text = TagLibrary.tagHash[node.data.tagId].getName();
-          App.treeRef.edit(node);
-          
-          App.updateHexview();
+          App.treeRef.settings.core.force_text = true;
+          App.treeRef.edit(node, TagLibrary.tagHash[node.data.tagId].getName());
         }
       };
       
@@ -397,6 +396,8 @@ var App = (function() {
     });
     
     App.treeElement.bind('rename_node.jstree', function(r, e) {
+      App.treeRef.settings.core.force_text = false;
+      
       var tag = TagLibrary.tagHash[e.node.data.tagId];
       
       tag.setHasName(true);
@@ -446,9 +447,9 @@ var App = (function() {
     
     var selA = App.selectedTag ? App.selectedTag.getStartIndex() : 0;
     var selB = App.selectedTag ? App.selectedTag.getEndIndex()   : 0;
-    
+
     var leftStr = new HighlightedString(hexStr, [ selA * 3, selB * 3 ]);
-    var rightStr = new HighlightedString(rawStr.split(/[^a-z0-9_\-\+\*\(\)\[\]\{\} ]/i).join('.'), [ selA, selB ]);
+    var rightStr = new HighlightedString(rawStr.replace(/[^\x20-\x7e]/g, '.'), [ selA, selB ]);
     
     var str2 = "";
     var rows = Math.ceil(rawStr.length / bytesPerRow);
